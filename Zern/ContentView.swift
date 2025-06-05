@@ -3,7 +3,6 @@
 //  BuildLifeCycle
 //
 //  Created by Juliana Lee on 6/3/25.
-//
 
 import SwiftUI
 
@@ -16,11 +15,11 @@ struct ContentView: View {
                         .resizable()
                         .frame(width: 80, height: 80)
                         .foregroundColor(.green)
-                    
+
                     Text("건물 생애 주기 예측기")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                    
+
                     Text("건물 수명과 탄소중립을 시각적으로 예측해보세요")
                         .font(.subheadline)
                         .foregroundColor(.gray)
@@ -32,17 +31,21 @@ struct ContentView: View {
                     NavigationLink(destination: BuildingInputView()) {
                         HomeButtonView(title: "🏗 건물 정보 입력하기", color: .blue)
                     }
-                    
+
                     NavigationLink(destination: CarbonNeutralInputView(
                         preLifeSpan: 50,
                         preEmbeddedCarbon: 0.0
                     )) {
                         HomeButtonView(title: "🌿 탄소중립 시뮬레이터", color: .green)
                     }
+
+                    NavigationLink(destination: CityRenovationView()) {
+                        HomeButtonView(title: "🏙 도시 리노베이션 보기", color: .purple)
+                    }
                 }
 
                 Spacer()
-                
+
                 Text("© 2025 Zern")
                     .font(.footnote)
                     .foregroundColor(.gray)

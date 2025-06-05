@@ -3,6 +3,7 @@
 //
 //  Created by Juliana Lee on 6/4/25.
 
+
 import SwiftUI
 
 struct CarbonNeutralResultView: View {
@@ -15,9 +16,10 @@ struct CarbonNeutralResultView: View {
     var energySource: String
 
     @State private var selectedTab: Int = 0
+    let allSources = ["태양광", "풍력", "지열", "바이오", "수력"]
 
     var body: some View {
-        let result = CarbonZebCalculator.calculateAll(
+        let selectedResult = CarbonZebCalculator.calculateAll(
             materialRatios: materialRatios,
             buildingArea: buildingArea,
             energyUse: energyUse,
@@ -39,34 +41,44 @@ struct CarbonNeutralResultView: View {
                 }
                 HStack(spacing: 12) {
                     CategoryCard(title: "건물", icon: "building.columns", index: 2, selectedTab: $selectedTab)
-                    CategoryCard(title: "결과", icon: "checkmark.seal", index: 3, selectedTab: $selectedTab)
+                    CategoryCard(title: "비교", icon: "chart.bar", index: 3, selectedTab: $selectedTab)
                 }
             }
 
-            Group {
-                switch selectedTab {
-                case 0:
-                    CarbonInfoView(result: result)
-                case 1:
-                    EnergyInfoView(result: result, energySource: energySource)
-                case 2:
-                    BuildingInfoView(buildingArea: buildingArea, lifeSpan: lifeSpan, offsetPeriod: offsetPeriod)
-                case 3:
-                    ZebStatusView(result: result)
-                default:
-                    EmptyView()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Group {
+                        switch selectedTab {
+                        case 0:
+                            CarbonInfoView(result: selectedResult)
+                        case 1:
+                            EnergyInfoView(result: selectedResult, energySource: energySource)
+                        case 2:
+                            BuildingInfoView(buildingArea: buildingArea, lifeSpan: lifeSpan, offsetPeriod: offsetPeriod)
+                        case 3:
+                            ComparisonTabView(
+                                allSources: allSources,
+                                currentSource: energySource,
+                                materialRatios: materialRatios,
+                                buildingArea: buildingArea,
+                                energyUse: energyUse,
+                                emissionFactor: emissionFactor,
+                                lifeSpan: lifeSpan,
+                                offsetPeriod: offsetPeriod
+                            )
+                        default:
+                            EmptyView()
+                        }
+                    }
                 }
+                .padding()
             }
-            .padding()
-
-            Spacer()
         }
         .padding()
         .navigationTitle("결과 보기")
     }
 }
 
-// MARK: - 카드 뷰
 struct CategoryCard: View {
     var title: String
     var icon: String
@@ -91,7 +103,6 @@ struct CategoryCard: View {
     }
 }
 
-// MARK: - 정보 뷰들
 struct CarbonInfoView: View {
     var result: ZebResult
     var body: some View {
@@ -131,17 +142,58 @@ struct BuildingInfoView: View {
     }
 }
 
-struct ZebStatusView: View {
-    var result: ZebResult
+struct ComparisonTabView: View {
+    let allSources: [String]
+    let currentSource: String
+    let materialRatios: [String: Double]
+    let buildingArea: Double
+    let energyUse: Double
+    let emissionFactor: Double
+    let lifeSpan: Int
+    let offsetPeriod: Int
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let year = result.offsetYear {
-                Text("상쇄 완료 연도: \(year)년")
-            } else {
-                Text("상쇄 완료 연도: 생애주기 내 달성 불가")
+        VStack(alignment: .leading, spacing: 16) {
+            Text("⚖️ 다른 에너지원과의 비교")
+                .font(.headline)
+
+            ForEach(allSources.filter { $0 != currentSource }, id: \ .self) { source in
+                let result = CarbonZebCalculator.calculateAll(
+                    materialRatios: materialRatios,
+                    buildingArea: buildingArea,
+                    energyUse: energyUse,
+                    emissionFactor: emissionFactor,
+                    lifeSpan: lifeSpan,
+                    offsetPeriod: offsetPeriod,
+                    energySource: source
+                )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label(source, systemImage: "leaf.fill")
+                            .font(.headline)
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text(result.isZEB ? "ZEB 가능" : "ZEB 불가")
+                            .foregroundColor(result.isZEB ? .green : .red)
+                            .bold()
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("총 탄소배출량: \(String(format: "%.0f", result.totalCarbon)) kg CO₂")
+                        Text("발전량 필요: \(String(format: "%.0f", result.annualEnergyNeeded)) kWh/년")
+                        Text("설치 면적: \(String(format: "%.1f", result.requiredArea)) ㎡")
+                        if let year = result.offsetYear {
+                            Text("상쇄 완료 연도: \(year)년")
+                        }
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
             }
-            Text("ZEB 가능 여부: \(result.isZEB ? "가능" : "불가")")
-                .bold()
         }
     }
 }
