@@ -19,10 +19,10 @@ struct BuildingInputView: View {
     @State private var hasCorrosion: Bool = false
 
     @State private var materialLives: [String: String] = [
-        "철근콘크리트": "50",
-        "철골": "40",
-        "조적": "35",
-        "목조": "30"
+        "철근콘크리트": "",
+        "철골": "",
+        "조적": "",
+        "목조": ""
     ]
     
     let usages = ["주거용", "상업용", "공공시설", "기타"]
