@@ -4,90 +4,103 @@
 //
 //  Created by Juliana Lee on 6/3/25.
 //
+
 import SwiftUI
 
 struct BuildingInputView: View {
-    @State private var yearBuilt: String = ""
-    @State private var selectedMaterials: [String: Double] = [:]
-    @State private var floors: Int = 1
-    @State private var usage: String = "주거용"
-    @State private var environment: String = "일반"
+    // 사용자 입력을 위한 상태 변수들
+    @State private var constructionYear: String = "" // 시공년도
+    @State private var materialRatios: [String: Double] = [:] // 재료 비율
+    @State private var numberOfFloors: Int = 1 // 층수
+    @State private var buildingUsage: String = "Residential" // 주 용도
+    @State private var environmentCondition: String = "Normal" // 환경 조건
 
-    @State private var recentlyRepaired: Bool = false
-    @State private var hasCracks: Bool = false
-    @State private var hasLeakage: Bool = false
-    @State private var hasCorrosion: Bool = false
+    // 유지보수 및 결함 상태
+    @State private var wasRecentlyRepaired: Bool = false
+    @State private var hasStructuralCracks: Bool = false
+    @State private var hasWaterLeakage: Bool = false
+    @State private var hasRebarCorrosion: Bool = false
 
-    @State private var materialLives: [String: String] = [
-        "철근콘크리트": "",
-        "철골": "",
-        "조적": "",
-        "목조": ""
+    // 재료별 기대 수명 (텍스트 입력 후 Int로 변환 예정)
+    @State private var materialLifeExpectancies: [String: String] = [
+        "Reinforced Concrete": "",
+        "Steel": "",
+        "Masonry": "",
+        "Wood": ""
     ]
     
-    let usages = ["주거용", "상업용", "공공시설", "기타"]
+    let usageOptions = ["Residential", "Commercial", "Public", "Other"]
     
     var body: some View {
+        
+        let materialOrder = ["Reinforced Concrete", "Steel", "Masonry", "Wood"]
+
         Form {
-            Section(header: Text("기본 정보")) {
-                TextField("시공년도", text: $yearBuilt)
+            // 기본 정보 입력 섹션
+            Section(header: Text("Basic Information")) {
+                TextField("Year Built", text: $constructionYear)
                     .keyboardType(.numberPad)
                 
-                Picker("주 용도", selection: $usage) {
-                    ForEach(usages, id: \.self) { Text($0) }
+                Picker("Main Usage", selection: $buildingUsage) {
+                    ForEach(usageOptions, id: \.self) { Text($0) }
                 }
                 
-                Stepper(value: $floors, in: 1...100) {
-                    Text("층수: \(floors)층")
+                Stepper(value: $numberOfFloors, in: 1...100) {
+                    Text("Floors: \(numberOfFloors)")
                 }
             }
 
-            MaterialInput(selectedMaterials: $selectedMaterials)
+            // 재료 비율 입력 섹션 (별도 컴포넌트로 구성)
+            MaterialInput(selectedMaterials: $materialRatios)
 
-            Section(header: Text("재료별 기준 수명(년)")) {
-                ForEach(materialLives.keys.sorted(), id: \.self) { material in
+            // 재료별 기준 수명 입력 섹션
+            Section(header: Text("Expected Life Span by Material (years)")) {
+                ForEach(materialOrder, id: \.self) { material in
                     TextField("\(material)", text: Binding(
-                        get: { materialLives[material] ?? "" },
-                        set: { materialLives[material] = $0 }
+                        get: { materialLifeExpectancies[material] ?? "" },
+                        set: { materialLifeExpectancies[material] = $0 }
                     ))
                     .keyboardType(.numberPad)
                 }
             }
 
-            Section(header: Text("건물 위치 환경")) {
-                Picker("환경 조건", selection: $environment) {
-                    ForEach(["일반", "해안 지역", "지진대", "고온다습", "고산건조"], id: \.self) {
+            // 환경 조건 선택 섹션
+            Section(header: Text("Environmental Condition")) {
+                Picker("Environment", selection: $environmentCondition) {
+                    ForEach(["Normal", "Coastal", "Seismic Zone", "Hot and Humid", "High-altitude Dry"], id: \.self) {
                         Text($0)
                     }
                 }
                 .pickerStyle(.menu)
             }
 
-            Section(header: Text("유지관리 및 점검 상태")) {
-                Toggle("최근 5년 내 보수 이력 있음", isOn: $recentlyRepaired)
-                Toggle("구조체 균열 있음", isOn: $hasCracks)
-                Toggle("누수 흔적 있음", isOn: $hasLeakage)
-                Toggle("철근 부식 있음", isOn: $hasCorrosion)
+            // 유지관리 및 결함 여부
+            Section(header: Text("Maintenance and Inspection")) {
+                Toggle("Repaired within last 5 years", isOn: $wasRecentlyRepaired)
+                Toggle("Structural Cracks Present", isOn: $hasStructuralCracks)
+                Toggle("Water Leakage Signs", isOn: $hasWaterLeakage)
+                Toggle("Rebar Corrosion Detected", isOn: $hasRebarCorrosion)
             }
 
+            // 예측 시작 버튼 → PredictionResultView로 이동
             NavigationLink(
                 destination: PredictionResultView(
-                    yearBuilt: yearBuilt,
-                    materialRatios: selectedMaterials,
-                    usage: usage,
-                    floors: floors,
-                    materialLives: materialLives.mapValues { Int($0) ?? 0 },
-                    environment: environment,
-                    recentlyRepaired: recentlyRepaired,
-                    hasCracks: hasCracks,
-                    hasLeakage: hasLeakage,
-                    hasCorrosion: hasCorrosion
+                    yearBuilt: constructionYear,
+                    materialRatios: materialRatios,
+                    usage: buildingUsage,
+                    floors: numberOfFloors,
+                    materialLives: materialLifeExpectancies.mapValues { Int($0) ?? 0 },
+                    environment: environmentCondition,
+                    recentlyRepaired: wasRecentlyRepaired,
+                    hasCracks: hasStructuralCracks,
+                    hasLeakage: hasWaterLeakage,
+                    hasCorrosion: hasRebarCorrosion
                 )
             ) {
-                Text("예측 시작")
+                Text("Start Prediction")
                     .foregroundColor(.blue)
             }
         }
-        .navigationTitle("건물 정보 입력")
+        .navigationTitle("Enter Building Info")
     }
 }

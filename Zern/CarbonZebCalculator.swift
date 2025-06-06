@@ -9,17 +9,18 @@ import Foundation
 
 struct CarbonZebCalculator {
     static func calculateAll(
-        materialRatios: [String: Double],
-        buildingArea: Double,
-        energyUse: Double,             // kWh/year
-        emissionFactor: Double,       // kgCO₂/kWh
-        lifeSpan: Int,
-        offsetPeriod: Int,
-        energySource: String,
-        reductionFactor: Double = 0.45,
-        installAreaPerKW: Double = 3.5
+        materialRatios: [String: Double],  // 재료별 비율 (%)
+        buildingArea: Double,              // 건물 연면적 (㎡)
+        energyUse: Double,                 // 연간 에너지 사용량 (kWh)
+        emissionFactor: Double,           // 전력 탄소계수 (kgCO₂/kWh)
+        lifeSpan: Int,                    // 건물 생애주기 (년)
+        offsetPeriod: Int,                // 상쇄 목표 기간 (년)
+        energySource: String,             // 선택한 에너지원
+        reductionFactor: Double = 0.45,   // 에너지 상쇄 효율
+        installAreaPerKW: Double = 3.5    // 1kW당 설치 면적 (㎡)
     ) -> ZebResult {
-        // 1. 내재탄소 계산
+
+        // [1] 내재 탄소량 계산
         let embeddedCarbon = materialRatios.reduce(0.0) { partialResult, entry in
             let material = entry.key
             let ratio = entry.value / 100.0
@@ -27,20 +28,20 @@ struct CarbonZebCalculator {
             return partialResult + ratio * factor * buildingArea
         }
 
-        // 2. 운영탄소 예측
+        // [2] 운영 탄소량 계산 (연간)
         let operatingCarbonPerYear = energyUse * emissionFactor
 
-        // 3. 총 탄소배출량
+        // [3] 총 탄소배출량 계산
         let totalCarbon = embeddedCarbon + Double(lifeSpan) * operatingCarbonPerYear
 
-        // 4. 선택된 신재생에너지의 연간 발전량 설정
+        // [4] 연간 목표 상쇄량 계산
         let generationPerKW = generationFactor(for: energySource)
         let annualOffsetTarget = totalCarbon / Double(offsetPeriod)
         let annualEnergyNeeded = annualOffsetTarget / reductionFactor
         let requiredKW = annualEnergyNeeded / generationPerKW
         let requiredArea = requiredKW * installAreaPerKW
 
-        // 5. 누적 상쇄량 계산
+        // [5] 연도별 누적 상쇄량 계산
         var cumulativeOffset: Double = 0.0
         var offsetData: [(year: Int, cumulative: Double)] = []
         let currentYear = Calendar.current.component(.year, from: Date())
@@ -56,6 +57,7 @@ struct CarbonZebCalculator {
             }
         }
 
+        // [6] ZEB 달성 여부 판단
         let isZEB = (offsetYear != nil && offsetYear! <= currentYear + lifeSpan)
 
         return ZebResult(
@@ -73,28 +75,30 @@ struct CarbonZebCalculator {
         )
     }
 
+    // 에너지원별 연간 발전량 상수값 반환
     private static func generationFactor(for source: String) -> Double {
         switch source {
-        case "태양광": return 1460     // 하루 4시간 × 365일
-        case "풍력":   return 2190     // 하루 6시간 × 365일
-        case "지열":   return 2630     // 7.2시간 기준
-        case "바이오":  return 2920     // 8시간 기준
-        case "수력":   return 4380     // 12시간 기준
-        default:       return 1460     // 기본값: 태양광
+        case "Solar": return 1460     // 4시간/일 × 365일
+        case "Wind":  return 2190     // 6시간/일 × 365일
+        case "Geothermal": return 2630
+        case "Biomass": return 2920
+        case "Hydropower": return 4380
+        default: return 1460         // 기본은 태양광
         }
     }
 }
 
+// 탄소중립 계산 결과 구조체
 struct ZebResult {
-    let embeddedCarbon: Double
-    let operatingCarbonPerYear: Double
-    let totalCarbon: Double
-    let annualOffsetTarget: Double
-    let annualEnergyNeeded: Double
-    let requiredKW: Double
-    let requiredArea: Double
-    let offsetYear: Int?
-    let isZEB: Bool
-    let offsetData: [(year: Int, cumulative: Double)]
-    let annualOffset: Double
+    let embeddedCarbon: Double              // 내재탄소량 (kg CO₂)
+    let operatingCarbonPerYear: Double      // 연간 운영탄소량 (kg CO₂)
+    let totalCarbon: Double                 // 총 탄소배출량 (kg CO₂)
+    let annualOffsetTarget: Double          // 연간 상쇄 목표량 (kg CO₂)
+    let annualEnergyNeeded: Double          // 연간 발전 필요량 (kWh)
+    let requiredKW: Double                  // 필요한 발전 용량 (kW)
+    let requiredArea: Double                // 설치 면적 (㎡)
+    let offsetYear: Int?                    // 상쇄 완료 연도
+    let isZEB: Bool                         // ZEB 달성 여부
+    let offsetData: [(year: Int, cumulative: Double)] // 연도별 누적 상쇄량
+    let annualOffset: Double                // 연간 상쇄량 (kg CO₂)
 }
